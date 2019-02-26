@@ -16,10 +16,37 @@
 
 package za.co.absa.spline.coresparkadapterapi
 
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+import org.apache.spark.sql.execution.command.CreateDataSourceTableAsSelectCommand
 import org.apache.spark.sql.execution.datasources.SaveIntoDataSourceCommand
 
-class WriteCommandParserImpl extends WriteCommandParser[SaveIntoDataSourceCommand] {
-  override def asWriteCommand(operation: SaveIntoDataSourceCommand): WriteCommand = {
-    WriteCommand(operation.options.getOrElse("path", ""), operation.mode, operation.provider, operation.query)
+class WriteCommandParserFactoryImpl extends WriteCommandParserFactory {
+  override def getWriteParser(): WriteCommandParser[LogicalPlan] = new WriteCommandParserImpl()
+
+  override def getSaveAsTableParser(): WriteCommandParser[LogicalPlan] = new SaveAsTableCommandParserImpl()
+}
+
+class SaveAsTableCommandParserImpl extends WriteCommandParser[LogicalPlan] {
+  override def matches(operation: LogicalPlan): Boolean = operation.isInstanceOf[CreateDataSourceTableAsSelectCommand]
+
+  override def asWriteCommand(operation: LogicalPlan): AbstractWriteCommand = {
+    val op = operation.asInstanceOf[CreateDataSourceTableAsSelectCommand]
+
+    val identifier = op.table.storage.locationUri match {
+      case Some(location) => location.toURL.toString
+      case _ => "table:/" + op.table.identifier.identifier
+    }
+    SaveAsTableCommand(identifier, op.mode, "table", op.query)
+  }
+}
+
+class WriteCommandParserImpl extends WriteCommandParser[LogicalPlan] {
+
+  override def matches(operation: LogicalPlan): Boolean = {
+    operation.isInstanceOf[SaveIntoDataSourceCommand]
+  }
+  override def asWriteCommand(operation: LogicalPlan): WriteCommand = {
+    val op = operation.asInstanceOf[SaveIntoDataSourceCommand]
+    WriteCommand(op.options.getOrElse("path", ""), op.mode, "table", op.query)
   }
 }
