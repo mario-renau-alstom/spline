@@ -19,7 +19,7 @@ import java.util.Arrays.asList
 
 import com.arangodb.velocypack.module.scala.VPackScalaModule
 import com.arangodb.{ArangoDBAsync, ArangoDatabaseAsync}
-import org.apache.commons.configuration.{CompositeConfiguration, EnvironmentConfiguration, SystemConfiguration}
+import org.apache.commons.configuration.{AbstractConfiguration, CompositeConfiguration, EnvironmentConfiguration, SystemConfiguration}
 import org.slf4s.Logging
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.context.annotation.{Bean, ComponentScan, Configuration}
@@ -48,10 +48,13 @@ class ArangoRepoConfig extends InitializingBean with Logging {
     arangoDb.db(Database.name)
 }
 
-object ArangoRepoConfig extends CompositeConfiguration(asList(
-  new SystemConfiguration,
-  new EnvironmentConfiguration))
-  with ConfTyped {
+object ArangoRepoConfig
+  extends CompositeConfiguration(asList(new SystemConfiguration, new EnvironmentConfiguration))
+    with ArangoRepoConfigLike
+
+trait ArangoRepoConfigLike extends ConfTyped {
+
+  this: AbstractConfiguration =>
 
   setThrowExceptionOnMissing(true)
 
@@ -64,7 +67,7 @@ object ArangoRepoConfig extends CompositeConfiguration(asList(
       ("arangodb://"
         + "(?:"
         + "([^@:]+)" //         user
-        + "(?::([^@:]+))?" //   :password
+        + "(?::(.+))?" //       :password
         + "@)?" //              @
         + "([^@:]+)" //         host
         + ":(\\d+)" //          :port
