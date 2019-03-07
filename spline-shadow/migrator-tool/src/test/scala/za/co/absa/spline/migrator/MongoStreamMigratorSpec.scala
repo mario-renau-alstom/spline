@@ -74,22 +74,22 @@ class MongoStreamMigratorSpec extends AsyncFunSpec with Matchers with BeforeAndA
   private def isLineageStoredInArango(lineageId: String) =
     arangodb.collection("execution").documentExists(lineage.id)
 
-  override protected def beforeEach(): Unit = {
-    afterEach()
+  override protected def beforeEach(): Unit = dropAndInitDbs()
+
+  override protected def afterEach(): Unit = dropAndInitDbs()
+
+  private def dropAndInitDbs(): Unit = {
     val db = arangodb
     if (db.exists()) {
       db.drop()
     }
     ArangoInit.initialize(db, dropIfExists = true)
- }
-
-  override protected def afterEach(): Unit =
     for {
       collectionName <- mongoConnection.db.collectionNames
       if !(collectionName startsWith "system.")
       collection = mongoConnection.db(collectionName)
     } collection.drop()
-
+  }
 
   protected def createDataLineage(
                                    appId: String,
