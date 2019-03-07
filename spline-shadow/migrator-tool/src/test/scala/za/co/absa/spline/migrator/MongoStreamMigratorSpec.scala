@@ -80,7 +80,7 @@ class MongoStreamMigratorSpec extends AsyncFunSpec with Matchers with BeforeAndA
     if (db.exists()) {
       db.drop()
     }
-    ArangoInit.initialize(db)
+    ArangoInit.initialize(db, dropIfExists = true)
  }
 
   override protected def afterEach(): Unit =
